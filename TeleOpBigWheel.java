@@ -1,5 +1,6 @@
 package org.firstinspires.ftc.teamcode;
 import java.util.Locale;
+import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 import com.qualcomm.robotcore.hardware.Servo;
 import com.qualcomm.robotcore.hardware.CRServo;
 import org.firstinspires.ftc.robotcore.external.navigation.Orientation;
@@ -20,9 +21,9 @@ import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.util.ElapsedTime;
 import com.qualcomm.robotcore.util.Range;
 
-@Autonomous(name="AutoBigWheel")
+@TeleOp(name="TeleOpBigWheel")
 
-public class AutoBigWheel extends LinearOpMode {
+public class TeleOpBigWheel extends LinearOpMode {
 
     private ElapsedTime runtime = new ElapsedTime();
     private DcMotor frontleft = null;
@@ -58,7 +59,14 @@ public class AutoBigWheel extends LinearOpMode {
     static final double     HEADING_THRESHOLD       = 1 ;      // As tight as we can make it with an integer gyro
     static final double     P_TURN_COEFF            = 0.1;     // Larger is more responsive, but also less stable
     static final double     P_DRIVE_COEFF           = 0.15;     // Larger is more responsive, but also less stable
+    static final double INCREMENT   = 0.002;     // amount to slow servo 
+    static final double MAX_POS     =  0.92;     // Maximum rotational position
+    static final double MIN_POS     =  0.42;     // Minimum rotational position
+    double  intakeliftPosition = (MIN_POS); 
 
+    double leftPower = 0;
+    double rightPower = 0;
+    int flipflopPosition = 0;
 
     @Override
     public void runOpMode() {
@@ -77,7 +85,6 @@ public class AutoBigWheel extends LinearOpMode {
         composeTelemetry();
         // ******GYRO
 
-
         frontleft = hardwareMap.get(DcMotor.class, "frontleft");
         frontright = hardwareMap.get(DcMotor.class, "frontright");
         backleft = hardwareMap.get(DcMotor.class, "backleft");
@@ -90,43 +97,116 @@ public class AutoBigWheel extends LinearOpMode {
          
         // Most robots need the motor on one side to be reversed to drive forward
         // Reverse the motor that runs backwards when connected directly to the battery
+        flipflop.setDirection(DcMotorSimple.Direction.REVERSE);
         frontleft.setDirection(DcMotorSimple.Direction.REVERSE);
         frontright.setDirection(DcMotorSimple.Direction.FORWARD);
         backleft.setDirection(DcMotorSimple.Direction.REVERSE);
         backright.setDirection(DcMotorSimple.Direction.FORWARD);
         flipflop.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
-        
+
         // Ensure the robot it stationary, then reset the encoders and calibrate the gyro.
         backleft.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
         backright.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+        flipflop.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
 
+        flipflop.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
         backleft.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
         backright.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
-
+        intakelift.setPosition(intakeliftPosition);
         // Wait for the game to start (Display Gyro value), and reset gyro before we move..
         while (!isStarted()) {
             telemetry.update();
         }
+        //waitForStart();
+        runtime.reset();
 
-        // Start the logging of measured acceleration
-        gyro.startAccelerationIntegration(new Position(), new Velocity(), 1000);
+        // run until the end of the match (driver presses STOP)
+        while (opModeIsActive()) {
+            intakeliftPosition = .60;
+            // Start the logging of measured acceleration
+            gyro.startAccelerationIntegration(new Position(), new Velocity(), 1000);
+
+            // Setup a variable for each drive wheel to save power level for telemetry
+
+            // Tank Mode uses one stick to control each wheel.
+            // - This requires no math, but it is hard to drive forward slowly and keep straight.
+            leftPower  = -gamepad1.left_stick_y ;
+            rightPower = -gamepad1.right_stick_y ;
+
+            if (gamepad1.x)
+                quackwheel.setPower(1);
+            else if (gamepad1.y)    
+                quackwheel.setPower(-1);
+            else
+                quackwheel.setPower(0);
+    
+            if (gamepad1.right_bumper){
+                flipflopPosition = flipflopPosition +  1;
+                flipflop.setPower(.4);                
+            }
+            else if (gamepad1.left_bumper)
+                if(flipflop.getCurrentPosition() > 0){
+                    flipflopPosition = flipflopPosition -  1;
+                    flipflop.setPower(-.4);
+                }
+                else{
+                    flipflopPosition = 0;
+                    flipflop.setPower(0);
+                }
+
+            flipflop.setTargetPosition(flipflopPosition);
+            flipflop.setMode(DcMotor.RunMode.RUN_TO_POSITION);
 
 
-        // Step through each leg of the path,
-        // Note: Reverse movement is obtained by setting a negative distance (not speed)
-        // Put a hold after each turn
-        gyroDrive(DRIVE_SPEED, 12.0, 0.0);    // Drive FWD 48 inches
-        gyroTurn( TURN_SPEED, -45.0);         // Turn  CCW to -45 Degrees
-        gyroHold( TURN_SPEED, -45.0, 0.5);    // Hold -45 Deg heading for a 1/2 second
-        gyroDrive(DRIVE_SPEED, 12.0, -45.0);  // Drive FWD 12 inches at 45 degrees
-        gyroTurn( TURN_SPEED,  45.0);         // Turn  CW  to  45 Degrees
-        gyroHold( TURN_SPEED,  45.0, 0.5);    // Hold  45 Deg heading for a 1/2 second
-        gyroTurn( TURN_SPEED,   0.0);         // Turn  CW  to   0 Degrees
-        gyroHold( TURN_SPEED,   0.0, 1.0);    // Hold  0 Deg heading for a 1 second
-        gyroDrive(DRIVE_SPEED,-36.0, 0.0);    // Drive REV 48 inches
+            if (gamepad1.dpad_up)
+                slide.setPower(1);
+            else if (gamepad1.dpad_down)  
+                slide.setPower(-1);
+            else
+                slide.setPower(0);
 
-        telemetry.addData("Path", "Complete");
-        telemetry.update();
+
+            if (gamepad1.dpad_left)
+                intake.setPower(1);
+            else if (gamepad1.dpad_right)  
+                intake.setPower(-1);
+
+
+            if (gamepad1.right_stick_button)
+                intake.setPower(0);
+
+            if (gamepad1.b) {
+                // Keep stepping up until we hit the max value.
+                intakeliftPosition += INCREMENT ;
+                if (intakeliftPosition >= MAX_POS ) {
+                    intakeliftPosition = MAX_POS;
+                }
+            }
+
+            if (gamepad1.a) {
+                // Keep stepping down until we hit the min value.
+                intakeliftPosition -= INCREMENT ;
+                if (intakeliftPosition <= MIN_POS ) {
+                    intakeliftPosition = MIN_POS;
+                }
+             }
+
+            intakelift.setPosition(intakeliftPosition);
+
+            // Send calculated power to wheels
+            frontleft.setPower(leftPower);
+            backleft.setPower(leftPower);
+            frontright.setPower(rightPower);
+            backright.setPower(rightPower);
+            // Show the elapsed game time and wheel power.
+            telemetry.addData("flipflop Position",  "%7d", flipflopPosition);
+            telemetry.addData("intakelift Position", "%5.2f", intakeliftPosition);
+            telemetry.addData("Status", "Run Time: " + runtime.toString());
+            telemetry.addData("Motors", "left (%.2f), right (%.2f)", leftPower, rightPower);
+            telemetry.update();
+
+
+        }
     }
 
 
