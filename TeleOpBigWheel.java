@@ -60,15 +60,15 @@ public class TeleOpBigWheel extends LinearOpMode {
     static final double     P_TURN_COEFF            = 0.1;     // Larger is more responsive, but also less stable
     static final double     P_DRIVE_COEFF           = 0.15;     // Larger is more responsive, but also less stable
     static final double INCREMENT   = 0.002;     // amount to slow servo 
-    static final double MAX_POS     =  0.92;     // Maximum rotational position
-    static final double MIN_POS     =  0.42;     // Minimum rotational position
-    double  intakeliftPosition = (MIN_POS); 
+    static final double MAX_POS     =  .90;     // Maximum rotational position
+    static final double MIN_POS     =  0.10;     // Minimum rotational position
+    double  intakeliftPosition = (MAX_POS); 
 
     double leftPower = 0;
     double rightPower = 0;
     int flipflopPosition = 0;
 
-    @Override
+    @Override 
     public void runOpMode() {
 
         // ******GYRO
@@ -119,10 +119,10 @@ public class TeleOpBigWheel extends LinearOpMode {
         }
         //waitForStart();
         runtime.reset();
+        intakeliftPosition = 0.12;
 
         // run until the end of the match (driver presses STOP)
         while (opModeIsActive()) {
-            intakeliftPosition = .60;
             // Start the logging of measured acceleration
             gyro.startAccelerationIntegration(new Position(), new Velocity(), 1000);
 
@@ -167,9 +167,9 @@ public class TeleOpBigWheel extends LinearOpMode {
 
 
             if (gamepad1.dpad_left)
-                intake.setPower(1);
-            else if (gamepad1.dpad_right)  
                 intake.setPower(-1);
+            else if (gamepad1.dpad_right)  
+                intake.setPower(2);
 
 
             if (gamepad1.right_stick_button)
