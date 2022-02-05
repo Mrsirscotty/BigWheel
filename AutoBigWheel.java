@@ -1,7 +1,7 @@
 package org.firstinspires.ftc.teamcode;
 import java.util.Locale;
-import com.qualcomm.robotcore.hardware.Servo;
 import com.qualcomm.robotcore.hardware.CRServo;
+import com.qualcomm.robotcore.hardware.Servo;
 import org.firstinspires.ftc.robotcore.external.navigation.Orientation;
 import org.firstinspires.ftc.robotcore.external.navigation.Acceleration;
 import org.firstinspires.ftc.robotcore.external.navigation.AxesReference;
@@ -58,9 +58,16 @@ public class AutoBigWheel extends LinearOpMode {
     static final double     HEADING_THRESHOLD       = 1 ;      // As tight as we can make it with an integer gyro
     static final double     P_TURN_COEFF            = 0.1;     // Larger is more responsive, but also less stable
     static final double     P_DRIVE_COEFF           = 0.15;     // Larger is more responsive, but also less stable
+    static final double INCREMENT   = 0.002;     // amount to slow servo 
+    static final double MAX_POS     =  .90;     // Maximum rotational position
+    static final double MIN_POS     =  0.10;     // Minimum rotational position
+    double  intakeliftPosition = (MAX_POS); 
 
+    double leftPower = 0;
+    double rightPower = 0;
+    int flipflopPosition = 0;
 
-    @Override
+    @Override 
     public void runOpMode() {
 
         // ******GYRO
@@ -77,7 +84,6 @@ public class AutoBigWheel extends LinearOpMode {
         composeTelemetry();
         // ******GYRO
 
-
         frontleft = hardwareMap.get(DcMotor.class, "frontleft");
         frontright = hardwareMap.get(DcMotor.class, "frontright");
         backleft = hardwareMap.get(DcMotor.class, "backleft");
@@ -90,27 +96,33 @@ public class AutoBigWheel extends LinearOpMode {
          
         // Most robots need the motor on one side to be reversed to drive forward
         // Reverse the motor that runs backwards when connected directly to the battery
+        flipflop.setDirection(DcMotorSimple.Direction.REVERSE);
         frontleft.setDirection(DcMotorSimple.Direction.REVERSE);
         frontright.setDirection(DcMotorSimple.Direction.FORWARD);
         backleft.setDirection(DcMotorSimple.Direction.REVERSE);
         backright.setDirection(DcMotorSimple.Direction.FORWARD);
         flipflop.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
-        
+
         // Ensure the robot it stationary, then reset the encoders and calibrate the gyro.
         backleft.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
         backright.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+        flipflop.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
 
+        flipflop.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
         backleft.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
         backright.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
+        intakelift.setPosition(intakeliftPosition);
 
         // Wait for the game to start (Display Gyro value), and reset gyro before we move..
         while (!isStarted()) {
             telemetry.update();
         }
 
+        runtime.reset();
+        intakeliftPosition = 0.12;
+
         // Start the logging of measured acceleration
         gyro.startAccelerationIntegration(new Position(), new Velocity(), 1000);
-
 
         // Step through each leg of the path,
         // Note: Reverse movement is obtained by setting a negative distance (not speed)
@@ -119,11 +131,11 @@ public class AutoBigWheel extends LinearOpMode {
         gyroTurn( TURN_SPEED, -45.0);         // Turn  CCW to -45 Degrees
         gyroHold( TURN_SPEED, -45.0, 0.5);    // Hold -45 Deg heading for a 1/2 second
         gyroDrive(DRIVE_SPEED, 12.0, -45.0);  // Drive FWD 12 inches at 45 degrees
-        gyroTurn( TURN_SPEED,  45.0);         // Turn  CW  to  45 Degrees
-        gyroHold( TURN_SPEED,  45.0, 0.5);    // Hold  45 Deg heading for a 1/2 second
-        gyroTurn( TURN_SPEED,   0.0);         // Turn  CW  to   0 Degrees
-        gyroHold( TURN_SPEED,   0.0, 1.0);    // Hold  0 Deg heading for a 1 second
-        gyroDrive(DRIVE_SPEED,-36.0, 0.0);    // Drive REV 48 inches
+        // gyroTurn( TURN_SPEED,  45.0);         // Turn  CW  to  45 Degrees
+        // gyroHold( TURN_SPEED,  45.0, 0.5);    // Hold  45 Deg heading for a 1/2 second
+        // gyroTurn( TURN_SPEED,   0.0);         // Turn  CW  to   0 Degrees
+        // gyroHold( TURN_SPEED,   0.0, 1.0);    // Hold  0 Deg heading for a 1 second
+        // gyroDrive(DRIVE_SPEED,-48.0, 0.0);    // Drive REV 48 inches
 
         telemetry.addData("Path", "Complete");
         telemetry.update();
