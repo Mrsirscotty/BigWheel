@@ -1,5 +1,11 @@
 package org.firstinspires.ftc.teamcode;
 import java.util.Locale;
+import org.firstinspires.ftc.robotcore.external.ClassFactory;
+import org.firstinspires.ftc.robotcore.external.navigation.VuforiaLocalizer;
+import org.firstinspires.ftc.robotcore.external.tfod.TFObjectDetector;
+import org.firstinspires.ftc.robotcore.external.hardware.camera.WebcamName;
+import org.firstinspires.ftc.robotcore.external.tfod.Recognition;
+import java.util.List;
 import com.qualcomm.robotcore.hardware.CRServo;
 import com.qualcomm.robotcore.hardware.Servo;
 import org.firstinspires.ftc.robotcore.external.navigation.Orientation;
@@ -33,6 +39,7 @@ public class AutoBigWheel extends LinearOpMode {
     private DcMotor flipflop = null;
     private CRServo intake = null;
     private Servo intakelift = null;
+    private Servo camerapivot = null;
     private CRServo slide = null;
     //private Servo capclaw;
     //private Servo caparm;
@@ -62,14 +69,29 @@ public class AutoBigWheel extends LinearOpMode {
     static final double MAX_POS     =  .90;     // Maximum rotational position
     static final double MIN_POS     =  0.10;     // Minimum rotational position
     double  intakeliftPosition = (MAX_POS); 
+    double  camerapivotPosition = (.445); 
 
     double leftPower = 0;
     double rightPower = 0;
     int flipflopPosition = 0;
+    // *********  IMAGE
+    private static final String TFOD_MODEL_ASSET = "FreightFrenzy_BCDM.tflite";
+    private static final String[] LABELS = {"Ball","Cube","Duck","Marker"};
+    private static final String VUFORIA_KEY ="AQEaZrT/////AAABmZHrtKUrx0CypYFpiQL2+jVaEynEOIKp9gQR7tRECXbWSW69Mue+tG6z2YfMcduKAT9L1pqYGN/BfFjKL3Jugcnqng+mHibF1lwkc0/2Vjo7VGo7SKzFRsu5nTLZb1/mKQjmn2FAbeFDH+beQmzIFXjNC8gY7+lxJ5VCIPETQ4f8RURMzzy0X3TvMgqJTP4EEB89CuPETliQzhS3eVohllcSj9MoQIsf+4eLOZr7O3VCGUWqk8fdi88z7DM8copU3s8RSaRskOYMrjyA6dyyISXNLs1u884MUi9mE+XrlwMzwKI1DGPIVHANeZG8+xQ0TIYyGdxrs95RFhCMc8yFLdE91BLRlOsK5sRouLXzQSDZ";
+    private VuforiaLocalizer vuforia;
+    private TFObjectDetector tfod;
+    // *********  IMAGE
 
     @Override 
     public void runOpMode() {
-
+        // *********  IMAGE
+        initVuforia();
+        initTfod();
+        if (tfod != null) {
+            tfod.activate();
+            tfod.setZoom(2, 16.0/9.0);
+        }
+        // *********  IMAGE
         // ******GYRO
         BNO055IMU.Parameters parameters = new BNO055IMU.Parameters();
         parameters.angleUnit           = BNO055IMU.AngleUnit.DEGREES;
@@ -93,7 +115,7 @@ public class AutoBigWheel extends LinearOpMode {
         intake = hardwareMap.get(CRServo.class, "intake");
         intakelift = hardwareMap.get(Servo.class, "intakelift");
         slide = hardwareMap.get(CRServo.class, "slide");
-         
+        camerapivot = hardwareMap.get(Servo.class, "camera"); 
         // Most robots need the motor on one side to be reversed to drive forward
         // Reverse the motor that runs backwards when connected directly to the battery
         flipflop.setDirection(DcMotorSimple.Direction.REVERSE);
@@ -112,6 +134,7 @@ public class AutoBigWheel extends LinearOpMode {
         backleft.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
         backright.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
         intakelift.setPosition(intakeliftPosition);
+        camerapivot.setPosition(camerapivotPosition);
 
         // Wait for the game to start (Display Gyro value), and reset gyro before we move..
         while (!isStarted()) {
@@ -120,6 +143,42 @@ public class AutoBigWheel extends LinearOpMode {
 
         runtime.reset();
         intakeliftPosition = 0.12;
+        //camerapivotPosition = .63;
+        //camerapivotPosition = .55;
+        //camerapivotPosition = .445;
+        intakelift.setPosition(intakeliftPosition);
+        camerapivot.setPosition(camerapivotPosition);
+        
+        // *********  IMAGE
+        if (opModeIsActive()) {
+            // for (initializer; condition; iterator) {
+            while (opModeIsActive()) {
+                if (tfod != null) {
+                    // getUpdatedRecognitions() will return null if no new information is available since
+                    // the last time that call was made.
+                    List<Recognition> updatedRecognitions = tfod.getUpdatedRecognitions();
+                    if (updatedRecognitions != null) {
+                      telemetry.addData("# Object Detected", updatedRecognitions.size());
+                      // step through the list of recognitions and display boundary info.
+                      int i = 0;
+                      for (Recognition recognition : updatedRecognitions) {
+                        telemetry.addData(String.format("label (%d)", i), recognition.getLabel());
+                        telemetry.addData(String.format("  left,top (%d)", i), "%.03f , %.03f",
+                                recognition.getLeft(), recognition.getTop());
+                        telemetry.addData(String.format("  right,bottom (%d)", i), "%.03f , %.03f",
+                                recognition.getRight(), recognition.getBottom());
+                        i++;
+                      }
+                      telemetry.update();
+                    }
+                }
+            }
+        }
+        // *********  IMAGE
+
+
+
+
 
         // Start the logging of measured acceleration
         gyro.startAccelerationIntegration(new Position(), new Velocity(), 1000);
@@ -127,10 +186,10 @@ public class AutoBigWheel extends LinearOpMode {
         // Step through each leg of the path,
         // Note: Reverse movement is obtained by setting a negative distance (not speed)
         // Put a hold after each turn
-        gyroDrive(DRIVE_SPEED, 12.0, 0.0);    // Drive FWD 48 inches
-        gyroTurn( TURN_SPEED, -45.0);         // Turn  CCW to -45 Degrees
-        gyroHold( TURN_SPEED, -45.0, 0.5);    // Hold -45 Deg heading for a 1/2 second
-        gyroDrive(DRIVE_SPEED, 12.0, -45.0);  // Drive FWD 12 inches at 45 degrees
+        //gyroDrive(DRIVE_SPEED, 12.0, 0.0);    // Drive FWD 48 inches
+        //gyroTurn( TURN_SPEED, -45.0);         // Turn  CCW to -45 Degrees
+        //gyroHold( TURN_SPEED, -45.0, 0.5);    // Hold -45 Deg heading for a 1/2 second
+        //gyroDrive(DRIVE_SPEED, 12.0, -45.0);  // Drive FWD 12 inches at 45 degrees
         // gyroTurn( TURN_SPEED,  45.0);         // Turn  CW  to  45 Degrees
         // gyroHold( TURN_SPEED,  45.0, 0.5);    // Hold  45 Deg heading for a 1/2 second
         // gyroTurn( TURN_SPEED,   0.0);         // Turn  CW  to   0 Degrees
@@ -431,6 +490,37 @@ public class AutoBigWheel extends LinearOpMode {
 
     String formatDegrees(double degrees){
         return String.format(Locale.getDefault(), "%.1f", AngleUnit.DEGREES.normalize(degrees));
+    }
+    /**
+     * Initialize the Vuforia localization engine.
+     */
+    private void initVuforia() {
+        /*
+         * Configure Vuforia by creating a Parameter object, and passing it to the Vuforia engine.
+         */
+        VuforiaLocalizer.Parameters parameters = new VuforiaLocalizer.Parameters();
+
+        parameters.vuforiaLicenseKey = VUFORIA_KEY;
+        parameters.cameraName = hardwareMap.get(WebcamName.class, "Webcam 1");
+
+        //  Instantiate the Vuforia engine
+        vuforia = ClassFactory.getInstance().createVuforia(parameters);
+
+        // Loading trackables is not necessary for the TensorFlow Object Detection engine.
+    }
+
+    /**
+     * Initialize the TensorFlow Object Detection engine.
+     */
+    private void initTfod() {
+        int tfodMonitorViewId = hardwareMap.appContext.getResources().getIdentifier(
+            "tfodMonitorViewId", "id", hardwareMap.appContext.getPackageName());
+        TFObjectDetector.Parameters tfodParameters = new TFObjectDetector.Parameters(tfodMonitorViewId);
+       tfodParameters.minResultConfidence = 0.8f;
+       tfodParameters.isModelTensorFlow2 = true;
+       tfodParameters.inputSize = 320;
+       tfod = ClassFactory.getInstance().createTFObjectDetector(tfodParameters, vuforia);
+       tfod.loadModelFromAsset(TFOD_MODEL_ASSET, LABELS);
     }
 }
 
