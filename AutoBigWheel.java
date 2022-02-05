@@ -69,8 +69,10 @@ public class AutoBigWheel extends LinearOpMode {
     static final double MAX_POS     =  .90;     // Maximum rotational position
     static final double MIN_POS     =  0.10;     // Minimum rotational position
     double  intakeliftPosition = (MAX_POS); 
-    double  camerapivotPosition = (.445); 
-
+    double  camerapivotPosition = (.44); 
+    boolean bDuckPosition1 = false;
+    boolean bDuckPosition2 = false;
+    boolean bDuckPosition3 = false;
     double leftPower = 0;
     double rightPower = 0;
     int flipflopPosition = 0;
@@ -84,28 +86,6 @@ public class AutoBigWheel extends LinearOpMode {
 
     @Override 
     public void runOpMode() {
-        // *********  IMAGE
-        initVuforia();
-        initTfod();
-        if (tfod != null) {
-            tfod.activate();
-            tfod.setZoom(2, 16.0/9.0);
-        }
-        // *********  IMAGE
-        // ******GYRO
-        BNO055IMU.Parameters parameters = new BNO055IMU.Parameters();
-        parameters.angleUnit           = BNO055IMU.AngleUnit.DEGREES;
-        parameters.accelUnit           = BNO055IMU.AccelUnit.METERS_PERSEC_PERSEC;
-        parameters.calibrationDataFile = "BNO055IMUCalibration.json"; // see the calibration sample opmode
-        parameters.loggingEnabled      = true;
-        parameters.loggingTag          = "IMU";
-        parameters.accelerationIntegrationAlgorithm = new JustLoggingAccelerationIntegrator();
-        gyro = hardwareMap.get(BNO055IMU.class, "imu");
-        gyro.initialize(parameters);
-        // Set up our telemetry dashboard
-        composeTelemetry();
-        // ******GYRO
-
         frontleft = hardwareMap.get(DcMotor.class, "frontleft");
         frontright = hardwareMap.get(DcMotor.class, "frontright");
         backleft = hardwareMap.get(DcMotor.class, "backleft");
@@ -136,52 +116,130 @@ public class AutoBigWheel extends LinearOpMode {
         intakelift.setPosition(intakeliftPosition);
         camerapivot.setPosition(camerapivotPosition);
 
+        // *********  IMAGE
+        initVuforia();
+        initTfod();
+        if (tfod != null) {
+            tfod.activate();
+            tfod.setZoom(2, 16.0/9.0);
+        }
+        // *********  IMAGE
+        // ******GYRO
+        BNO055IMU.Parameters parameters = new BNO055IMU.Parameters();
+        parameters.angleUnit           = BNO055IMU.AngleUnit.DEGREES;
+        parameters.accelUnit           = BNO055IMU.AccelUnit.METERS_PERSEC_PERSEC;
+        parameters.calibrationDataFile = "BNO055IMUCalibration.json"; // see the calibration sample opmode
+        parameters.loggingEnabled      = true;
+        parameters.loggingTag          = "IMU";
+        parameters.accelerationIntegrationAlgorithm = new JustLoggingAccelerationIntegrator();
+        gyro = hardwareMap.get(BNO055IMU.class, "imu");
+        gyro.initialize(parameters);
+        // Set up our telemetry dashboard
+        composeTelemetry();
+        // ******GYRO
+
+
         // Wait for the game to start (Display Gyro value), and reset gyro before we move..
         while (!isStarted()) {
             telemetry.update();
         }
 
         runtime.reset();
-        intakeliftPosition = 0.12;
         //camerapivotPosition = .63;
         //camerapivotPosition = .55;
-        //camerapivotPosition = .445;
-        intakelift.setPosition(intakeliftPosition);
+        //camerapivotPosition = .45;
+
+
+        /* while (opModeIsActive()) {
+        gyroDrive(DRIVE_SPEED, 12.0, 0.0);    // Drive FWD 48 inches
+        gyroDrive(DRIVE_SPEED, 24.0, 0.0);    // Drive FWD 48 inches
+        //gyroDrive(DRIVE_SPEED, 12.0, -45.0);  // Drive FWD 12 inches at 45 degrees
+        //gyroTurn( TURN_SPEED,  45.0);         // Turn  CW  to  45 Degrees
+        //gyroHold( TURN_SPEED,  45.0, 0.5);    // Hold  45 Deg heading for a 1/2 second
+        //gyroTurn( TURN_SPEED,   0.0);         // Turn  CW  to   0 Degrees
+        //gyroHold( TURN_SPEED,   0.0, 1.0);    // Hold  0 Deg heading for a 1 second
+        gyroDrive(DRIVE_SPEED,-48.0, 0.0);    // Drive REV 48 inches
+        sleep(30000);
+        }*/
+
+
+
+        // Find Duck
+        bDuckPosition1 = duckSearch();
+        camerapivotPosition = .55;
         camerapivot.setPosition(camerapivotPosition);
-        
-        // *********  IMAGE
-        if (opModeIsActive()) {
-            // for (initializer; condition; iterator) {
-            while (opModeIsActive()) {
-                if (tfod != null) {
-                    // getUpdatedRecognitions() will return null if no new information is available since
-                    // the last time that call was made.
-                    List<Recognition> updatedRecognitions = tfod.getUpdatedRecognitions();
-                    if (updatedRecognitions != null) {
-                      telemetry.addData("# Object Detected", updatedRecognitions.size());
-                      // step through the list of recognitions and display boundary info.
-                      int i = 0;
-                      for (Recognition recognition : updatedRecognitions) {
-                        telemetry.addData(String.format("label (%d)", i), recognition.getLabel());
-                        telemetry.addData(String.format("  left,top (%d)", i), "%.03f , %.03f",
-                                recognition.getLeft(), recognition.getTop());
-                        telemetry.addData(String.format("  right,bottom (%d)", i), "%.03f , %.03f",
-                                recognition.getRight(), recognition.getBottom());
-                        i++;
-                      }
-                      telemetry.update();
-                    }
-                }
-            }
+        sleep(500);
+        bDuckPosition2 = duckSearch();
+        camerapivotPosition = .64;
+        camerapivot.setPosition(camerapivotPosition);
+        sleep(500);
+        bDuckPosition3 = duckSearch();
+        flipflopPosition = 450;
+        if (bDuckPosition1){
+            telemetry.addData("Duck Level 1", "Found");
+            flipflopPosition = 0;
         }
-        // *********  IMAGE
-
-
-
-
-
+        if (bDuckPosition2){
+            telemetry.addData("Duck Level 2", "Found");
+            flipflopPosition = 300;
+        }
+        if (bDuckPosition3){
+            telemetry.addData("Duck Level 3", "Found");
+            flipflopPosition = 450;
+        }
+        telemetry.update();
+        sleep(1000);        
+        intakeliftPosition = 0.12;
+        intakelift.setPosition(intakeliftPosition);
+        
         // Start the logging of measured acceleration
         gyro.startAccelerationIntegration(new Position(), new Velocity(), 1000);
+
+        //Lift arm to correct level
+        flipflop.setTargetPosition(flipflopPosition);
+        flipflop.setMode(DcMotor.RunMode.RUN_TO_POSITION);
+        flipflop.setPower(.4);
+        sleep(1000);
+        // Drive to alliance hub
+        gyroDrive(DRIVE_SPEED, 6.0, 0.0);    // Drive FWD 48 inches
+        gyroTurn( TURN_SPEED, 30.0);         // Turn  CCW to -45 Degrees
+        gyroHold( TURN_SPEED, 30.0, 0.5);    // Hold -45 Deg heading for a 1/2 second
+        gyroDrive(DRIVE_SPEED, 12.0, 30.0);  // Drive FWD 12 inches at 45 degrees
+
+        intakeliftPosition = 0.20;
+        intakelift.setPosition(intakeliftPosition);
+
+        intake.setPower(-.3);
+        sleep(500);
+        intake.setPower(-1);
+        sleep(500);
+        intakeliftPosition = 0.15;
+        intakelift.setPosition(intakeliftPosition);
+        intake.setPower(-.3);
+        sleep(500);
+        intake.setPower(0);
+        //gyroDrive(DRIVE_SPEED, -12.0, 30.0);  // Drive FWD 12 inches at 45 degrees
+        backleft.setPower(-.5);
+        backright.setPower(-.5);
+        frontleft.setPower(0);
+        frontright.setPower(0);
+        sleep(1000);
+        backleft.setPower(0);
+        backright.setPower(0);
+        flipflop.setTargetPosition(0);
+        flipflop.setMode(DcMotor.RunMode.RUN_TO_POSITION);
+        flipflop.setPower(-.4);
+        sleep(1000);
+
+        gyroTurn( TURN_SPEED, 90.0);         // Turn  CCW to -45 Degrees
+        gyroHold( TURN_SPEED, 90.0, 0.5);    // Hold -45 Deg heading for a 1/2 second
+        backleft.setPower(-.5);
+        backright.setPower(-.5);
+        frontleft.setPower(0);
+        frontright.setPower(0);
+        sleep(1000);
+        backleft.setPower(0);
+        backright.setPower(0);
 
         // Step through each leg of the path,
         // Note: Reverse movement is obtained by setting a negative distance (not speed)
@@ -521,6 +579,44 @@ public class AutoBigWheel extends LinearOpMode {
        tfodParameters.inputSize = 320;
        tfod = ClassFactory.getInstance().createTFObjectDetector(tfodParameters, vuforia);
        tfod.loadModelFromAsset(TFOD_MODEL_ASSET, LABELS);
+    }
+    
+    private boolean duckSearch() {
+
+        boolean  onDuckFound = false;
+        int d = 0;
+        while (d < 50) {
+    
+            if (tfod != null) {
+            // getUpdatedRecognitions() will return null if no new information is available since
+            // the last time that call was made.
+                List<Recognition> updatedRecognitions = tfod.getUpdatedRecognitions();
+                if (updatedRecognitions != null) {
+                  telemetry.addData("# Object Detected", updatedRecognitions.size());
+                  // step through the list of recognitions and display boundary info.
+                  int i = 0;
+                  for (Recognition recognition : updatedRecognitions) {
+                    telemetry.addData(String.format("label (%d)", i), recognition.getLabel());
+                    telemetry.addData(String.format("  left,top (%d)", i), "%.03f , %.03f",
+                            recognition.getLeft(), recognition.getTop());
+                    telemetry.addData(String.format("  right,bottom (%d)", i), "%.03f , %.03f",
+                            recognition.getRight(), recognition.getBottom());
+                    i++;
+                    if ("Duck" == recognition.getLabel()){
+                        onDuckFound = true;
+                        d = 50;
+                    }
+                        
+                  }
+                  d++;
+                  telemetry.update();
+                }
+                
+    
+            }
+
+        }
+        return onDuckFound;
     }
 }
 

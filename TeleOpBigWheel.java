@@ -169,7 +169,7 @@ public class TeleOpBigWheel extends LinearOpMode {
             if (gamepad1.dpad_left)
                 intake.setPower(-1);
             else if (gamepad1.dpad_right)  
-                intake.setPower(2);
+                intake.setPower(1);
 
 
             if (gamepad1.right_stick_button)
