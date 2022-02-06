@@ -108,11 +108,15 @@ public class AutoBigWheel extends LinearOpMode {
         // Ensure the robot it stationary, then reset the encoders and calibrate the gyro.
         backleft.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
         backright.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+        frontleft.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+        frontright.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
         flipflop.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
 
         flipflop.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
         backleft.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
         backright.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
+        frontleft.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
+        frontright.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
         intakelift.setPosition(intakeliftPosition);
         camerapivot.setPosition(camerapivotPosition);
 
@@ -149,30 +153,17 @@ public class AutoBigWheel extends LinearOpMode {
         //camerapivotPosition = .55;
         //camerapivotPosition = .45;
 
-
-        /* while (opModeIsActive()) {
-        gyroDrive(DRIVE_SPEED, 12.0, 0.0);    // Drive FWD 48 inches
-        gyroDrive(DRIVE_SPEED, 24.0, 0.0);    // Drive FWD 48 inches
-        //gyroDrive(DRIVE_SPEED, 12.0, -45.0);  // Drive FWD 12 inches at 45 degrees
-        //gyroTurn( TURN_SPEED,  45.0);         // Turn  CW  to  45 Degrees
-        //gyroHold( TURN_SPEED,  45.0, 0.5);    // Hold  45 Deg heading for a 1/2 second
-        //gyroTurn( TURN_SPEED,   0.0);         // Turn  CW  to   0 Degrees
-        //gyroHold( TURN_SPEED,   0.0, 1.0);    // Hold  0 Deg heading for a 1 second
-        gyroDrive(DRIVE_SPEED,-48.0, 0.0);    // Drive REV 48 inches
-        sleep(30000);
-        }*/
-
-
-
         // Find Duck
+        intakeliftPosition = 0.44;
+        intakelift.setPosition(intakeliftPosition);
         bDuckPosition1 = duckSearch();
         camerapivotPosition = .55;
         camerapivot.setPosition(camerapivotPosition);
-        sleep(500);
+        intakeliftPosition = 0.22;
+        intakelift.setPosition(intakeliftPosition);
         bDuckPosition2 = duckSearch();
         camerapivotPosition = .64;
         camerapivot.setPosition(camerapivotPosition);
-        sleep(500);
         bDuckPosition3 = duckSearch();
         flipflopPosition = 450;
         if (bDuckPosition1){
@@ -188,7 +179,6 @@ public class AutoBigWheel extends LinearOpMode {
             flipflopPosition = 450;
         }
         telemetry.update();
-        sleep(1000);        
         intakeliftPosition = 0.12;
         intakelift.setPosition(intakeliftPosition);
         
@@ -196,63 +186,55 @@ public class AutoBigWheel extends LinearOpMode {
         gyro.startAccelerationIntegration(new Position(), new Velocity(), 1000);
 
         //Lift arm to correct level
-        flipflop.setTargetPosition(flipflopPosition);
-        flipflop.setMode(DcMotor.RunMode.RUN_TO_POSITION);
-        flipflop.setPower(.4);
-        sleep(1000);
         // Drive to alliance hub
         gyroDrive(DRIVE_SPEED, 6.0, 0.0);    // Drive FWD 48 inches
         gyroTurn( TURN_SPEED, 30.0);         // Turn  CCW to -45 Degrees
         gyroHold( TURN_SPEED, 30.0, 0.5);    // Hold -45 Deg heading for a 1/2 second
-        gyroDrive(DRIVE_SPEED, 12.0, 30.0);  // Drive FWD 12 inches at 45 degrees
+        flipflop.setTargetPosition(flipflopPosition);
+        flipflop.setMode(DcMotor.RunMode.RUN_TO_POSITION);
+        flipflop.setPower(.4);
+        gyroDrive(.4, 16.0, 30.0);  // Drive FWD 12 inches at 45 degrees
 
+
+        intake.setPower(-1);
+        sleep(250);
         intakeliftPosition = 0.20;
         intakelift.setPosition(intakeliftPosition);
-
-        intake.setPower(-.3);
-        sleep(500);
-        intake.setPower(-1);
-        sleep(500);
-        intakeliftPosition = 0.15;
+        sleep(250);
+        intakeliftPosition = 0.3;
         intakelift.setPosition(intakeliftPosition);
-        intake.setPower(-.3);
-        sleep(500);
+        sleep(250);
+        intakeliftPosition = 0.12;
+        intakelift.setPosition(intakeliftPosition);
+        sleep(750);
+        intakelift.setPosition(.3);
+        sleep(250);
+        intakelift.setPosition(MAX_POS);
+        gyroDrive(.3, -9.0, 30.0);  // Drive FWD 12 inches at 45 degrees
         intake.setPower(0);
-        //gyroDrive(DRIVE_SPEED, -12.0, 30.0);  // Drive FWD 12 inches at 45 degrees
-        backleft.setPower(-.5);
-        backright.setPower(-.5);
-        frontleft.setPower(0);
-        frontright.setPower(0);
-        sleep(1000);
-        backleft.setPower(0);
-        backright.setPower(0);
+
         flipflop.setTargetPosition(0);
         flipflop.setMode(DcMotor.RunMode.RUN_TO_POSITION);
-        flipflop.setPower(-.4);
-        sleep(1000);
+        flipflop.setPower(-.2);
 
-        gyroTurn( TURN_SPEED, 90.0);         // Turn  CCW to -45 Degrees
-        gyroHold( TURN_SPEED, 90.0, 0.5);    // Hold -45 Deg heading for a 1/2 second
-        backleft.setPower(-.5);
-        backright.setPower(-.5);
-        frontleft.setPower(0);
-        frontright.setPower(0);
+        intakelift.setPosition(MAX_POS);
+        gyroTurn( TURN_SPEED, 90.0);     
+        gyroHold( TURN_SPEED, 90, 0.5);   
+        gyroDrive(.4, -27.0, 90.0);  
+        gyroDrive(DRIVE_SPEED, 4.0, 90.0);  
+        gyroTurn( TURN_SPEED, 0.0);    
+        gyroHold( TURN_SPEED, 0, 0.5); 
+        gyroDrive(.3, -10.0, 0.0);  
+        quackwheel.setPower(-.5);
+        gyroDrive(DRIVE_SPEED, 1.0, 0.0); 
+        gyroTurn( TURN_SPEED, 5.0);  
+        gyroHold( TURN_SPEED, 5.0, 0.5); 
+        gyroDrive(.3, -1.0, 5.0);  
+        gyroHold( TURN_SPEED, 10.0, 1); 
         sleep(1000);
-        backleft.setPower(0);
-        backright.setPower(0);
+        quackwheel.setPower(0);
+        gyroDrive(DRIVE_SPEED, 23 , -5.0); 
 
-        // Step through each leg of the path,
-        // Note: Reverse movement is obtained by setting a negative distance (not speed)
-        // Put a hold after each turn
-        //gyroDrive(DRIVE_SPEED, 12.0, 0.0);    // Drive FWD 48 inches
-        //gyroTurn( TURN_SPEED, -45.0);         // Turn  CCW to -45 Degrees
-        //gyroHold( TURN_SPEED, -45.0, 0.5);    // Hold -45 Deg heading for a 1/2 second
-        //gyroDrive(DRIVE_SPEED, 12.0, -45.0);  // Drive FWD 12 inches at 45 degrees
-        // gyroTurn( TURN_SPEED,  45.0);         // Turn  CW  to  45 Degrees
-        // gyroHold( TURN_SPEED,  45.0, 0.5);    // Hold  45 Deg heading for a 1/2 second
-        // gyroTurn( TURN_SPEED,   0.0);         // Turn  CW  to   0 Degrees
-        // gyroHold( TURN_SPEED,   0.0, 1.0);    // Hold  0 Deg heading for a 1 second
-        // gyroDrive(DRIVE_SPEED,-48.0, 0.0);    // Drive REV 48 inches
 
         telemetry.addData("Path", "Complete");
         telemetry.update();
@@ -295,9 +277,13 @@ public class AutoBigWheel extends LinearOpMode {
             // Set Target and Turn On RUN_TO_POSITION
             backleft.setTargetPosition(newLeftTarget);
             backright.setTargetPosition(newRightTarget);
+            frontleft.setTargetPosition(newLeftTarget);
+            frontright.setTargetPosition(newRightTarget);
 
             backleft.setMode(DcMotor.RunMode.RUN_TO_POSITION);
             backright.setMode(DcMotor.RunMode.RUN_TO_POSITION);
+            frontleft.setMode(DcMotor.RunMode.RUN_TO_POSITION);
+            frontright.setMode(DcMotor.RunMode.RUN_TO_POSITION);
 
             // start motion.
             speed = Range.clip(Math.abs(speed), 0.0, 1.0);
@@ -337,8 +323,10 @@ public class AutoBigWheel extends LinearOpMode {
                 // Display drive status for the driver.
                 telemetry.addData("Err/St",  "%5.1f/%5.1f",  error, steer);
                 telemetry.addData("Target",  "%7d:%7d",      newLeftTarget,  newRightTarget);
-                telemetry.addData("Actual",  "%7d:%7d",      backleft.getCurrentPosition(),
-                                                             backright.getCurrentPosition());
+                telemetry.addData("Actual",  "%7d:%7d:%7d:%7d", backleft.getCurrentPosition(),
+                                                                backright.getCurrentPosition(),
+                                                                frontleft.getCurrentPosition(),
+                                                                frontright.getCurrentPosition());
                 telemetry.addData("Speed",   "%5.2f:%5.2f",  leftSpeed, rightSpeed);
                 telemetry.update();
             }
@@ -352,6 +340,8 @@ public class AutoBigWheel extends LinearOpMode {
             // Turn off RUN_TO_POSITION
             backleft.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
             backright.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
+            frontleft.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
+            frontright.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
         }
     }
 
