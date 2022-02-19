@@ -48,20 +48,8 @@ public class AutoBigWheel extends LinearOpMode {
     private CRServo slide = null;
 
     // **** BlinkLEDs
-    private final static int LED_PERIOD = 10;
-    private final static int GAMEPAD_LOCKOUT = 500;
     RevBlinkinLedDriver blinkinLedDriver;
     RevBlinkinLedDriver.BlinkinPattern pattern;
-
-    Telemetry.Item patternName;
-    Telemetry.Item display;
-    DisplayKind displayKind;
-    Deadline ledCycleDeadline;
-    Deadline gamepadRateLimit;
-    protected enum DisplayKind {
-        MANUAL,
-        AUTO
-    }
     // **** BlinkLEDs
     
 
@@ -144,17 +132,9 @@ public class AutoBigWheel extends LinearOpMode {
         camerapivot.setPosition(camerapivotPosition);
         
         // **** BlinkLEDs
-        displayKind = DisplayKind.AUTO;
-
         blinkinLedDriver = hardwareMap.get(RevBlinkinLedDriver.class, "blinkin");
         pattern = RevBlinkinLedDriver.BlinkinPattern.BLACK;
         blinkinLedDriver.setPattern(pattern);
-
-        display = telemetry.addData("Display Kind: ", displayKind.toString());
-        patternName = telemetry.addData("Pattern: ", pattern.toString());
-
-        ledCycleDeadline = new Deadline(LED_PERIOD, TimeUnit.SECONDS);
-        gamepadRateLimit = new Deadline(GAMEPAD_LOCKOUT, TimeUnit.MILLISECONDS);
         // **** BlinkLEDs
 
 
@@ -188,52 +168,51 @@ public class AutoBigWheel extends LinearOpMode {
         }
 
         runtime.reset();
-        //camerapivotPosition = .63;
-        //camerapivotPosition = .55;
-        //camerapivotPosition = .45;
-
+        gyro.startAccelerationIntegration(new Position(), new Velocity(), 1000);
         // Find Duck
         intakeliftPosition = 0.44;
         intakelift.setPosition(intakeliftPosition);
-        bDuckPosition1 = duckSearch();
-        camerapivotPosition = .55;
-        camerapivot.setPosition(camerapivotPosition);
-        intakeliftPosition = 0.22;
-        intakelift.setPosition(intakeliftPosition);
-        bDuckPosition2 = duckSearch();
-        camerapivotPosition = .64;
-        camerapivot.setPosition(camerapivotPosition);
-        bDuckPosition3 = duckSearch();
+        pattern = RevBlinkinLedDriver.BlinkinPattern.SHOT_WHITE;
         flipflopPosition = 450;
-        if (bDuckPosition1){
+        if (duckSearch()){
             telemetry.addData("Duck Level 1", "Found");
+            pattern = RevBlinkinLedDriver.BlinkinPattern.AQUA;
+            blinkinLedDriver.setPattern(pattern);
             flipflopPosition = 0;
-        }
-        if (bDuckPosition2){
-            telemetry.addData("Duck Level 2", "Found");
-            flipflopPosition = 300;
-        }
-        if (bDuckPosition3){
-            telemetry.addData("Duck Level 3", "Found");
-            flipflopPosition = 450;
+        } 
+        else {
+            camerapivotPosition = .55;
+            camerapivot.setPosition(camerapivotPosition);
+            if (duckSearch()){
+                telemetry.addData("Duck Level 2", "Found");
+                pattern = RevBlinkinLedDriver.BlinkinPattern.TWINKLES_RAINBOW_PALETTE;
+                blinkinLedDriver.setPattern(pattern);
+                flipflopPosition = 300;
+            }
+            else {
+                camerapivotPosition = .64;
+                camerapivot.setPosition(camerapivotPosition);
+                if (duckSearch()){
+                    telemetry.addData("Duck Level 3", "Found");
+                    pattern = RevBlinkinLedDriver.BlinkinPattern.CONFETTI;
+                    blinkinLedDriver.setPattern(pattern);
+                }
+            }
         }
         telemetry.update();
+        blinkinLedDriver.setPattern(pattern);
+
         intakeliftPosition = 0.12;
         intakelift.setPosition(intakeliftPosition);
-        
-        // Start the logging of measured acceleration
-        gyro.startAccelerationIntegration(new Position(), new Velocity(), 1000);
-
-        //Lift arm to correct level
-        // Drive to alliance hub
-        gyroDrive(DRIVE_SPEED, 6.0, 0.0);    // Drive FWD 48 inches
+        encoderDrive(DRIVE_SPEED, 6, 6, 3);
+        //gyroDrive(DRIVE_SPEED, 6.0, 0.0);    // Drive FWD 48 inches
         gyroTurn( TURN_SPEED, 30.0);         // Turn  CCW to -45 Degrees
         gyroHold( TURN_SPEED, 30.0, 0.5);    // Hold -45 Deg heading for a 1/2 second
         flipflop.setTargetPosition(flipflopPosition);
         flipflop.setMode(DcMotor.RunMode.RUN_TO_POSITION);
         flipflop.setPower(.4);
-        gyroDrive(.4, 16.0, 30.0);  // Drive FWD 12 inches at 45 degrees
-
+        //gyroDrive(.4, 16.0, 30.0);  // Drive FWD 12 inches at 45 degrees
+        encoderDrive(DRIVE_SPEED, 16, 16, 3);
 
         intake.setPower(-1);
         sleep(250);
@@ -249,30 +228,43 @@ public class AutoBigWheel extends LinearOpMode {
         intakelift.setPosition(.3);
         sleep(250);
         intakelift.setPosition(MAX_POS);
-        gyroDrive(.3, -9.0, 30.0);  // Drive FWD 12 inches at 45 degrees
+        encoderDrive(DRIVE_SPEED, -9, -9, 3);
+        //gyroDrive(.3, -9.0, 30.0);  // Drive FWD 12 inches at 45 degrees
         intake.setPower(0);
 
         flipflop.setTargetPosition(0);
         flipflop.setMode(DcMotor.RunMode.RUN_TO_POSITION);
         flipflop.setPower(-.2);
+        pattern = RevBlinkinLedDriver.BlinkinPattern.BLUE;
+        blinkinLedDriver.setPattern(pattern);
 
         intakelift.setPosition(MAX_POS);
         gyroTurn( TURN_SPEED, 90.0);     
         gyroHold( TURN_SPEED, 90, 0.5);   
-        gyroDrive(.4, -27.0, 90.0);  
-        gyroDrive(DRIVE_SPEED, 4.0, 90.0);  
+        encoderDrive(DRIVE_SPEED, -27, -27, 4);
+        //gyroDrive(.4, -27.0, 90.0);  
+        encoderDrive(DRIVE_SPEED, 4, 4, 4);
+        //gyroDrive(DRIVE_SPEED, 4.0, 90.0);  
         gyroTurn( TURN_SPEED, 0.0);    
         gyroHold( TURN_SPEED, 0, 0.5); 
-        gyroDrive(.3, -10.0, 0.0);  
+        //gyroDrive(.3, -10.0, 0.0);  
+        encoderDrive(DRIVE_SPEED, -10, -10, 4);
+        pattern = RevBlinkinLedDriver.BlinkinPattern.FIRE_LARGE;
+        blinkinLedDriver.setPattern(pattern);
+
         quackwheel.setPower(-.5);
         gyroDrive(DRIVE_SPEED, 1.0, 0.0); 
         gyroTurn( TURN_SPEED, 5.0);  
         gyroHold( TURN_SPEED, 5.0, 0.5); 
         gyroDrive(.3, -1.0, 5.0);  
         gyroHold( TURN_SPEED, 10.0, 1); 
+        pattern = RevBlinkinLedDriver.BlinkinPattern.LARSON_SCANNER_RED;
+        blinkinLedDriver.setPattern(pattern);
+
         sleep(1000);
         quackwheel.setPower(0);
-        gyroDrive(DRIVE_SPEED, 23 , -5.0); 
+        encoderDrive(DRIVE_SPEED, 23, 23, 5);
+        //gyroDrive(DRIVE_SPEED, 23 , -5.0); 
 
 
         telemetry.addData("Path", "Complete");
@@ -609,6 +601,78 @@ public class AutoBigWheel extends LinearOpMode {
        tfod = ClassFactory.getInstance().createTFObjectDetector(tfodParameters, vuforia);
        tfod.loadModelFromAsset(TFOD_MODEL_ASSET, LABELS);
     }
+
+    public void encoderDrive(double speed,
+                             double leftInches, double rightInches,
+                             double timeoutS) {
+        int newbackleftTarget;
+        int newbackrightTarget;
+        int newfrontleftTarget;
+        int newfrontrightTarget;
+
+
+        // Ensure that the opmode is still active
+        if (opModeIsActive()) {
+
+            // Determine new target position, and pass to motor controller
+            newbackleftTarget = backleft.getCurrentPosition() + (int)(leftInches * COUNTS_PER_INCH);
+            newbackrightTarget = backright.getCurrentPosition() + (int)(rightInches * COUNTS_PER_INCH);
+            newfrontleftTarget = frontleft.getCurrentPosition() + (int)(leftInches * COUNTS_PER_INCH);
+            newfrontrightTarget = frontright.getCurrentPosition() + (int)(rightInches * COUNTS_PER_INCH);
+
+            backleft.setTargetPosition(newbackleftTarget);
+            backright.setTargetPosition(newbackrightTarget);
+            frontleft.setTargetPosition(newfrontleftTarget);
+            frontright.setTargetPosition(newfrontrightTarget);
+
+            // Turn On RUN_TO_POSITION
+            backleft.setMode(DcMotor.RunMode.RUN_TO_POSITION);
+            backright.setMode(DcMotor.RunMode.RUN_TO_POSITION);
+            frontleft.setMode(DcMotor.RunMode.RUN_TO_POSITION);
+            frontright.setMode(DcMotor.RunMode.RUN_TO_POSITION);
+
+            // reset the timeout time and start motion.
+            runtime.reset();
+            backleft.setPower(Math.abs(speed));
+            backright.setPower(Math.abs(speed));
+            frontleft.setPower(Math.abs(speed));
+            frontright.setPower(Math.abs(speed));
+
+            // keep looping while we are still active, and there is time left, and both motors are running.
+            // Note: We use (isBusy() && isBusy()) in the loop test, which means that when EITHER motor hits
+            // its target position, the motion will stop.  This is "safer" in the event that the robot will
+            // always end the motion as soon as possible.
+            // However, if you require that BOTH motors have finished their moves before the robot continues
+            // onto the next step, use (isBusy() || isBusy()) in the loop test.
+            while (opModeIsActive() &&
+                   (runtime.seconds() < timeoutS) &&
+                   (backleft.isBusy() && backright.isBusy())) {
+
+                // Display it for the driver.
+                telemetry.addData("Path1",  "Running to %7d :%7d", newbackleftTarget,  newbackrightTarget);
+                telemetry.addData("Path2",  "Running at %7d :%7d",
+                                            backleft.getCurrentPosition(),
+                                            backright.getCurrentPosition());
+                telemetry.update();
+            }
+
+            // Stop all motion;
+            backleft.setPower(0);
+            backright.setPower(0);
+            frontleft.setPower(0);
+            frontright.setPower(0);
+
+            // Turn off RUN_TO_POSITION
+            backleft.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
+            backright.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
+            frontleft.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
+            frontright.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
+
+            //  sleep(250);   // optional pause after each move
+        }
+    }
+
+
     
     private boolean duckSearch() {
 
@@ -648,49 +712,7 @@ public class AutoBigWheel extends LinearOpMode {
         return onDuckFound;
     }
     
-        protected void handleGamepad()
-    {
-        if (!gamepadRateLimit.hasExpired()) {
-            return;
-        }
 
-        if (gamepad1.a) {
-            setDisplayKind(DisplayKind.MANUAL);
-            gamepadRateLimit.reset();
-        } else if (gamepad1.b) {
-            setDisplayKind(DisplayKind.AUTO);
-            gamepadRateLimit.reset();
-        } else if ((displayKind == DisplayKind.MANUAL) && (gamepad1.left_bumper)) {
-            pattern = pattern.previous();
-            displayPattern();
-            gamepadRateLimit.reset();
-        } else if ((displayKind == DisplayKind.MANUAL) && (gamepad1.right_bumper)) {
-            pattern = pattern.next();
-            displayPattern();
-            gamepadRateLimit.reset();
-        }
-    }
-
-    protected void setDisplayKind(DisplayKind displayKind)
-    {
-        this.displayKind = displayKind;
-        display.setValue(displayKind.toString());
-    }
-
-    protected void doAutoDisplay()
-    {
-        if (ledCycleDeadline.hasExpired()) {
-            pattern = pattern.next();
-            displayPattern();
-            ledCycleDeadline.reset();
-        }
-    }
-
-    protected void displayPattern()
-    {
-        blinkinLedDriver.setPattern(pattern);
-        patternName.setValue(pattern.toString());
-    }
 }
 
 

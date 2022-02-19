@@ -183,6 +183,10 @@ public class TeleOpBigWheel extends LinearOpMode {
                 leftPower  = -gamepad1.left_stick_y ;
                 rightPower = -gamepad1.right_stick_y ;
             }
+            frontleft.setPower(leftPower);
+            backleft.setPower(leftPower);
+            frontright.setPower(rightPower);
+            backright.setPower(rightPower);
 
             if (gamepad1.x)
                 quackwheel.setPower(1);
@@ -231,6 +235,7 @@ public class TeleOpBigWheel extends LinearOpMode {
                     intakeliftPosition = MAX_POS;
                 }
             }
+            intakelift.setPosition(intakeliftPosition);
 
             if (gamepad1.dpad_left) {
                 // Keep stepping down until we hit the min value.
@@ -240,18 +245,15 @@ public class TeleOpBigWheel extends LinearOpMode {
                 }
              }
 
-            intakelift.setPosition(intakeliftPosition);
 
             // Send calculated power to wheels
-            frontleft.setPower(leftPower);
-            backleft.setPower(leftPower);
-            frontright.setPower(rightPower);
-            backright.setPower(rightPower);
             // Show the elapsed game time and wheel power.
             telemetry.addData("flipflop Position",  "%7d", flipflopPosition);
             telemetry.addData("intakelift Position", "%5.2f", intakeliftPosition);
             telemetry.addData("Status", "Run Time: " + runtime.toString());
             telemetry.addData("Motors", "left (%.2f), right (%.2f)", leftPower, rightPower);
+            telemetry.addData("Display Kind: ", displayKind.toString());
+            telemetry.addData("Pattern: ", pattern.toString());
             telemetry.update();
 
 
