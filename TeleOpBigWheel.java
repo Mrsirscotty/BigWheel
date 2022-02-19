@@ -1,5 +1,9 @@
 package org.firstinspires.ftc.teamcode;
 import java.util.Locale;
+import java.util.concurrent.TimeUnit;
+import com.qualcomm.hardware.rev.RevBlinkinLedDriver;
+import org.firstinspires.ftc.robotcore.external.Telemetry;
+import org.firstinspires.ftc.robotcore.internal.system.Deadline;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 import com.qualcomm.robotcore.hardware.Servo;
 import com.qualcomm.robotcore.hardware.CRServo;
@@ -35,8 +39,23 @@ public class TeleOpBigWheel extends LinearOpMode {
     private CRServo intake = null;
     private Servo intakelift = null;
     private CRServo slide = null;
-    //private Servo capclaw;
-    //private Servo caparm;
+
+    // **** BlinkLEDs
+    private final static int LED_PERIOD = 10;
+    private final static int GAMEPAD_LOCKOUT = 200;
+    RevBlinkinLedDriver blinkinLedDriver;
+    RevBlinkinLedDriver.BlinkinPattern pattern;
+
+    Telemetry.Item patternName;
+    Telemetry.Item display;
+    DisplayKind displayKind;
+    Deadline ledCycleDeadline;
+    Deadline gamepadRateLimit;
+    protected enum DisplayKind {
+        MANUAL,
+        AUTO
+    }
+    // **** BlinkLEDs
 
     // ******GYRO
     BNO055IMU gyro;
@@ -85,6 +104,20 @@ public class TeleOpBigWheel extends LinearOpMode {
         composeTelemetry();
         // ******GYRO
 
+        // **** BlinkLEDs
+        displayKind = DisplayKind.MANUAL;
+
+        blinkinLedDriver = hardwareMap.get(RevBlinkinLedDriver.class, "blinkin");
+        pattern = RevBlinkinLedDriver.BlinkinPattern.BLACK;
+        blinkinLedDriver.setPattern(pattern);
+
+        display = telemetry.addData("Display Kind: ", displayKind.toString());
+        patternName = telemetry.addData("Pattern: ", pattern.toString());
+
+        ledCycleDeadline = new Deadline(LED_PERIOD, TimeUnit.SECONDS);
+        gamepadRateLimit = new Deadline(GAMEPAD_LOCKOUT, TimeUnit.MILLISECONDS);
+        // **** BlinkLEDs
+
         frontleft = hardwareMap.get(DcMotor.class, "frontleft");
         frontright = hardwareMap.get(DcMotor.class, "frontright");
         backleft = hardwareMap.get(DcMotor.class, "backleft");
@@ -124,18 +157,36 @@ public class TeleOpBigWheel extends LinearOpMode {
         // run until the end of the match (driver presses STOP)
         while (opModeIsActive()) {
             // Start the logging of measured acceleration
+
+            // **** BlinkLEDs
+            handleGamepad();
+
+            if (displayKind == DisplayKind.AUTO)
+                doAutoDisplay();
+            // **** BlinkLEDs
+            
             gyro.startAccelerationIntegration(new Position(), new Velocity(), 1000);
 
             // Setup a variable for each drive wheel to save power level for telemetry
 
             // Tank Mode uses one stick to control each wheel.
             // - This requires no math, but it is hard to drive forward slowly and keep straight.
-            leftPower  = -gamepad1.left_stick_y ;
-            rightPower = -gamepad1.right_stick_y ;
+            if (gamepad1.left_trigger>0){
+                leftPower = -gamepad1.left_trigger;
+                rightPower = leftPower;
+            }
+            else if (gamepad1.right_trigger>0) {
+                leftPower = gamepad1.right_trigger;
+                rightPower = leftPower;
+            }
+            else {
+                leftPower  = -gamepad1.left_stick_y ;
+                rightPower = -gamepad1.right_stick_y ;
+            }
 
             if (gamepad1.x)
                 quackwheel.setPower(1);
-            else if (gamepad1.y)    
+            else if (gamepad1.b)    
                 quackwheel.setPower(-1);
             else
                 quackwheel.setPower(0);
@@ -144,7 +195,7 @@ public class TeleOpBigWheel extends LinearOpMode {
                 flipflopPosition = flipflopPosition +  1;
                 flipflop.setPower(.4);                
             }
-            else if (gamepad1.left_bumper)
+            else if (gamepad1.left_bumper){
                 if(flipflop.getCurrentPosition() > 0){
                     flipflopPosition = flipflopPosition -  1;
                     flipflop.setPower(-.4);
@@ -153,7 +204,7 @@ public class TeleOpBigWheel extends LinearOpMode {
                     flipflopPosition = 0;
                     flipflop.setPower(0);
                 }
-
+            }
             flipflop.setTargetPosition(flipflopPosition);
             flipflop.setMode(DcMotor.RunMode.RUN_TO_POSITION);
 
@@ -166,16 +217,14 @@ public class TeleOpBigWheel extends LinearOpMode {
                 slide.setPower(0);
 
 
-            if (gamepad1.dpad_left)
-                intake.setPower(-1);
-            else if (gamepad1.dpad_right)  
-                intake.setPower(1);
-
-
             if (gamepad1.right_stick_button)
                 intake.setPower(0);
+            else if (gamepad1.y)
+                intake.setPower(1);
+            if (gamepad1.a)
+                intake.setPower(-1);
 
-            if (gamepad1.b) {
+            if (gamepad1.dpad_right) {
                 // Keep stepping up until we hit the max value.
                 intakeliftPosition += INCREMENT ;
                 if (intakeliftPosition >= MAX_POS ) {
@@ -183,7 +232,7 @@ public class TeleOpBigWheel extends LinearOpMode {
                 }
             }
 
-            if (gamepad1.a) {
+            if (gamepad1.dpad_left) {
                 // Keep stepping down until we hit the min value.
                 intakeliftPosition -= INCREMENT ;
                 if (intakeliftPosition <= MIN_POS ) {
@@ -500,5 +549,57 @@ public class TeleOpBigWheel extends LinearOpMode {
     String formatDegrees(double degrees){
         return String.format(Locale.getDefault(), "%.1f", AngleUnit.DEGREES.normalize(degrees));
     }
+    
+    protected void handleGamepad()
+    {
+        if (!gamepadRateLimit.hasExpired()) {
+            return;
+        }
+        if (gamepad1.right_stick_button) {
+            setDisplayKind(DisplayKind.MANUAL);
+            gamepadRateLimit.reset();
+        } else if (gamepad1.left_stick_button) {
+            setDisplayKind(DisplayKind.AUTO);
+            gamepadRateLimit.reset();
+        } else if ((displayKind == DisplayKind.MANUAL) && (gamepad1.back)) {
+            pattern = pattern.previous();
+            displayPattern();
+            gamepadRateLimit.reset();
+        } else if ((displayKind == DisplayKind.MANUAL) && (gamepad1.start)) {
+            pattern = pattern.next();
+            displayPattern();
+            gamepadRateLimit.reset();
+        } else if (gamepad1.guide) {
+            setDisplayKind(DisplayKind.MANUAL);
+            pattern = RevBlinkinLedDriver.BlinkinPattern.BLACK;
+            blinkinLedDriver.setPattern(pattern);
+            displayPattern();
+            gamepadRateLimit.reset();
+        }
+
+    }
+
+    protected void setDisplayKind(DisplayKind displayKind)
+    {
+        this.displayKind = displayKind;
+        display.setValue(displayKind.toString());
+    }
+
+    protected void doAutoDisplay()
+    {
+        if (ledCycleDeadline.hasExpired()) {
+            pattern = pattern.next();
+            displayPattern();
+            ledCycleDeadline.reset();
+        }
+    }
+
+    protected void displayPattern()
+    {
+        blinkinLedDriver.setPattern(pattern);
+        patternName.setValue(pattern.toString());
+    }
+    
+    
 }
 

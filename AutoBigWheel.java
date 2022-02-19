@@ -1,5 +1,7 @@
 package org.firstinspires.ftc.teamcode;
 import java.util.Locale;
+import java.util.concurrent.TimeUnit;
+import com.qualcomm.hardware.rev.RevBlinkinLedDriver;
 import org.firstinspires.ftc.robotcore.external.ClassFactory;
 import org.firstinspires.ftc.robotcore.external.navigation.VuforiaLocalizer;
 import org.firstinspires.ftc.robotcore.external.tfod.TFObjectDetector;
@@ -25,6 +27,9 @@ import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.util.ElapsedTime;
 import com.qualcomm.robotcore.util.Range;
+import org.firstinspires.ftc.robotcore.external.Telemetry;
+import org.firstinspires.ftc.robotcore.internal.system.Deadline;
+import com.qualcomm.hardware.rev.RevBlinkinLedDriver;
 
 @Autonomous(name="AutoBigWheel")
 
@@ -41,8 +46,25 @@ public class AutoBigWheel extends LinearOpMode {
     private Servo intakelift = null;
     private Servo camerapivot = null;
     private CRServo slide = null;
-    //private Servo capclaw;
-    //private Servo caparm;
+
+    // **** BlinkLEDs
+    private final static int LED_PERIOD = 10;
+    private final static int GAMEPAD_LOCKOUT = 500;
+    RevBlinkinLedDriver blinkinLedDriver;
+    RevBlinkinLedDriver.BlinkinPattern pattern;
+
+    Telemetry.Item patternName;
+    Telemetry.Item display;
+    DisplayKind displayKind;
+    Deadline ledCycleDeadline;
+    Deadline gamepadRateLimit;
+    protected enum DisplayKind {
+        MANUAL,
+        AUTO
+    }
+    // **** BlinkLEDs
+    
+
 
     // ******GYRO
     BNO055IMU gyro;
@@ -96,6 +118,7 @@ public class AutoBigWheel extends LinearOpMode {
         intakelift = hardwareMap.get(Servo.class, "intakelift");
         slide = hardwareMap.get(CRServo.class, "slide");
         camerapivot = hardwareMap.get(Servo.class, "camera"); 
+        
         // Most robots need the motor on one side to be reversed to drive forward
         // Reverse the motor that runs backwards when connected directly to the battery
         flipflop.setDirection(DcMotorSimple.Direction.REVERSE);
@@ -119,6 +142,22 @@ public class AutoBigWheel extends LinearOpMode {
         frontright.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
         intakelift.setPosition(intakeliftPosition);
         camerapivot.setPosition(camerapivotPosition);
+        
+        // **** BlinkLEDs
+        displayKind = DisplayKind.AUTO;
+
+        blinkinLedDriver = hardwareMap.get(RevBlinkinLedDriver.class, "blinkin");
+        pattern = RevBlinkinLedDriver.BlinkinPattern.BLACK;
+        blinkinLedDriver.setPattern(pattern);
+
+        display = telemetry.addData("Display Kind: ", displayKind.toString());
+        patternName = telemetry.addData("Pattern: ", pattern.toString());
+
+        ledCycleDeadline = new Deadline(LED_PERIOD, TimeUnit.SECONDS);
+        gamepadRateLimit = new Deadline(GAMEPAD_LOCKOUT, TimeUnit.MILLISECONDS);
+        // **** BlinkLEDs
+
+
 
         // *********  IMAGE
         initVuforia();
@@ -608,5 +647,51 @@ public class AutoBigWheel extends LinearOpMode {
         }
         return onDuckFound;
     }
+    
+        protected void handleGamepad()
+    {
+        if (!gamepadRateLimit.hasExpired()) {
+            return;
+        }
+
+        if (gamepad1.a) {
+            setDisplayKind(DisplayKind.MANUAL);
+            gamepadRateLimit.reset();
+        } else if (gamepad1.b) {
+            setDisplayKind(DisplayKind.AUTO);
+            gamepadRateLimit.reset();
+        } else if ((displayKind == DisplayKind.MANUAL) && (gamepad1.left_bumper)) {
+            pattern = pattern.previous();
+            displayPattern();
+            gamepadRateLimit.reset();
+        } else if ((displayKind == DisplayKind.MANUAL) && (gamepad1.right_bumper)) {
+            pattern = pattern.next();
+            displayPattern();
+            gamepadRateLimit.reset();
+        }
+    }
+
+    protected void setDisplayKind(DisplayKind displayKind)
+    {
+        this.displayKind = displayKind;
+        display.setValue(displayKind.toString());
+    }
+
+    protected void doAutoDisplay()
+    {
+        if (ledCycleDeadline.hasExpired()) {
+            pattern = pattern.next();
+            displayPattern();
+            ledCycleDeadline.reset();
+        }
+    }
+
+    protected void displayPattern()
+    {
+        blinkinLedDriver.setPattern(pattern);
+        patternName.setValue(pattern.toString());
+    }
 }
+
+
 
